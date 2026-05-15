@@ -1,2 +1,2 @@
 # Research
-personal research thingz
+Just a place to gather research ideas
