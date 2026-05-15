@@ -1,0 +1,86 @@
+---
+title: "Inflation Money"
+date: "2026-05-15"
+output: pdf_document
+---
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# libraries
+library("knitr")
+library("readxl")
+library("dplyr")
+library("tidyr")
+```
+
+
+# An Introduction
+
+I've finally came around to checking out Polymarket. To those that don't know it,
+it's a simple betting site. I wanted to try and learn about time-series analysis
+and trying a bet on inflation seemed like an easy entry[^1]
+
+
+# The Bet
+
+The site poses a simple question:
+
+$$
+\text{How high will inflation get in 2026?}
+$$
+
+With the following odds:
+```{r, echo=FALSE, fig.align='center', out.width="75%"}
+knitr::include_graphics("odds.png", dpi=300)
+```
+
+We can see that inflation already crossed above 3% and 3.5% - they appear at the bottom as "resolved", i.e whoever bet on these won.
+It's important to understand the context of the bet - if at ANY month during the year inflation passes some threshold, it will be 
+resolved in favor of whoever placed a bet on that threshold. We need to get a little formal so we can start thinking about the problem:
+
+Denote $\pi_m$ the Consumer Price Index (denoted by CPI from now on) at the end of month $m \in (1, ..., 12)$.
+Denote $t \in (4, 4.5, 5, 6, 8, 10) := T$ the critical thresholds suggested in the bet.
+Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\} > t$ for all thresholds t. We would like to model the probability $P(E_t)$ for all $t \in T$
+
+
+# The Data
+
+After understanding what we would like to model, we can start building some basic models.
+First, we need to gather some data. I've downloaded data about past CPI information[^2]. Each row is a single year, each column
+a month. As always, we need to clean up the data before we can start using it effectively. The following code imports 
+the data, and cleans it up so we can start processing it:
+```{r, echo=TRUE, warning=FALSE}
+data <- read_excel("hist_cpi-u.xlsx", skip = 3)
+data <- data[-1, ] # remove first row
+data <- data[, -1] # remove first col
+data <- data %>% 
+  slice(1:(n()-3)) %>% # remove last 3 lines
+  mutate(across(everything(),as.numeric)) # make sure all columns are numeric
+```
+
+here are the first couple of rows to get a feel for what we have:
+```{r, echo=FALSE}
+head(data)
+```
+
+# The Models
+
+Now let's get our hands dirty with time-series analysis. In general, a time-series is just a sequence of data points indexed 
+in chronological order. We can order our data in many different ways. One natural way to do so, is to go linearly in time.
+We can take $x_0 := PCI_{\text{January, 1913}}$, $x_1 := PCI_{\text{February, 1913}}$ and so on.
+
+
+
+
+
+
+
+
+
+
+
+
+[^1]: in hindsight it's probably one of the toughest things to try and predict.
+The US government tries and fails at it. Clearly, I'll manage to outsmart 'em.
+
+[^2]: https://www.bls.gov/cpi/tables/supplemental-files/
