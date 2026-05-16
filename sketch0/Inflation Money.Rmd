@@ -34,20 +34,22 @@ With the following odds:
 knitr::include_graphics("odds.png", dpi=300)
 ```
 
-We can see that inflation already crossed above 3% and 3.5% - they appear at the bottom as "resolved", i.e whoever bet on these won.
+We can see that inflation already crossed the 3% and 3.5% thresholds - they appear at the bottom as "resolved", i.e whoever bet on these won.
 It's important to understand the context of the bet - if at ANY month during the year inflation passes some threshold, it will be 
-resolved in favor of whoever placed a bet on that threshold. We need to get a little formal so we can start thinking about the problem:
+resolved in favor of whoever placed a bet on that threshold. In this problem's context, a given month's threshold is calculated using the
+$\textit{Consumer Price Index}$. We need to get a little formal so we can start thinking about the problem:
 
-Denote $\pi_m$ the Consumer Price Index (denoted by CPI from now on) at the end of month $m \in (1, ..., 12)$.
+Denote $\pi_m$ the inflation ratio (denoted by IR from now on) at the end of month $m \in (1, ..., 12)$.
 Denote $t \in (4, 4.5, 5, 6, 8, 10) := T$ the critical thresholds suggested in the bet.
-Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\} > t$ for all thresholds t. We would like to model the probability $P(E_t)$ for all $t \in T$
+Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\} > t$, for all thresholds t.
+We would like to model the probability $P(E_t)$ for all $t \in T$
 
 
 # The Data
 
-After understanding what we would like to model, we can start building some basic models.
+After understanding what we would like to predict, we can start building some basic models.
 First, we need to gather some data. I've downloaded data about past CPI information[^2]. Each row is a single year, each column
-a month. As always, we need to clean up the data before we can start using it effectively. The following code imports 
+is a month. As always, we need to clean up the data before we can start using it effectively. The following code imports 
 the data, and cleans it up so we can start processing it:
 ```{r, echo=TRUE, warning=FALSE}
 data <- read_excel("hist_cpi-u.xlsx", skip = 3)
@@ -69,9 +71,19 @@ Now let's get our hands dirty with time-series analysis. In general, a time-seri
 in chronological order. We can order our data in many different ways. One natural way to do so, is to go linearly in time.
 We can take $x_0 := PCI_{\text{January, 1913}}$, $x_1 := PCI_{\text{February, 1913}}$ and so on.
 
+As we've seen earlier, what we're interested in is the inflation ratio - not the CPI of each month directly.
+From a short search in Google, we find the following relationship between IR and CPI at time t:
+$$
+\pi_t := \frac{CPI_t - CPI_{t-12}}{CPI_{t-12}} \cdot 100
+$$
 
+We should note that this is not a very comfortable variable, and a more suitable one could be $x_t := log(CPI_t) - log(CPI_{t-12}) = log(\frac{CPI_t}{CPI_{t-12}})$.
+First, notice the direct connecting between $\pi_t$ and $x_t$. if we denote $r_t := \frac{CPI_t}{CPI_{t-12}}$, we have $\pi_t = (r_t-1) \cdot 100$ 
+and $x_t = log(r_t)$. We can use Taylor series approximation $log(x+1) \approx x$ for small 'x's, and thus $log(r_t) = log(1 + (r_t-1)) \approx r_t-1$.
+Therefore: $\log(r_t) \approx \frac{\pi_t}{100} \rightarrow \pi_t \approx 100 log(r_t)$
 
-
+We can therefore model $x_t$ and easily find the connection back to $\pi_t$. log-scales are preferred for many more reasons - they are easy to manipulate algebraically, 
+they represent proportional changes well and in general they stabilizes the data.
 
 
 

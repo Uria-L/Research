@@ -1,6 +1,5 @@
 ---
 title: "Simple Time Series"
-author: "U"
 date: "2026-05-15"
 output: pdf_document
 ---
