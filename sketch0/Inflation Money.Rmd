@@ -44,8 +44,12 @@ Denote $t \in (4, 4.5, 5, 6, 8, 10) := T$ the critical thresholds suggested in t
 Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\} > t$, for all thresholds t.
 We would like to model the probability $P(E_t)$ for all $t \in T$
 
+The general process will be composed of 2 stages:
 
-# The Data
+1. Collect, organize and analyze initial data
+2. Construct (learn and test) a model designed to predict the probability $P(E_t)$
+
+# Step 1 - The Data
 
 After understanding what we would like to predict, we can start building some basic models.
 First, we need to gather some data. I've downloaded data about past CPI information[^2]. Each row is a single year, each column
@@ -65,7 +69,9 @@ here are the first couple of rows to get a feel for what we have:
 head(data)
 ```
 
-# The Models
+# Step 2 - The Models
+
+## Brief Introduction
 
 Now let's get our hands dirty with time-series analysis. In general, a time-series is just a sequence of data points indexed 
 in chronological order. We can order our data in many different ways. One natural way to do so, is to go linearly in time.
@@ -78,13 +84,16 @@ $$
 $$
 
 We should note that this is not a very comfortable variable, and a more suitable one could be $x_t := log(CPI_t) - log(CPI_{t-12}) = log(\frac{CPI_t}{CPI_{t-12}})$.
-First, notice the direct connecting between $\pi_t$ and $x_t$. if we denote $r_t := \frac{CPI_t}{CPI_{t-12}}$, we have $\pi_t = (r_t-1) \cdot 100$ 
+First, notice the direct connection between $\pi_t$ and $x_t$. if we denote $r_t := \frac{CPI_t}{CPI_{t-12}}$, we have $\pi_t = (r_t-1) \cdot 100$ 
 and $x_t = log(r_t)$. We can use Taylor series approximation $log(x+1) \approx x$ for small 'x's, and thus $log(r_t) = log(1 + (r_t-1)) \approx r_t-1$.
-Therefore: $\log(r_t) \approx \frac{\pi_t}{100} \rightarrow \pi_t \approx 100 log(r_t)$
+Therefore: $\log(r_t) \approx \frac{\pi_t}{100} \rightarrow \pi_t \approx 100 \cdot log(r_t)$
 
-We can therefore model $x_t$ and easily find the connection back to $\pi_t$. log-scales are preferred for many more reasons - they are easy to manipulate algebraically, 
-they represent proportional changes well and in general they stabilizes the data.
+We can therefore model $x_t$ and easily find the connection back to $\pi_t$. log-scales are preferred for a couple of reasons - they are easy to manipulate algebraically, 
+and represent proportional changes well. From now on, the variable we would like to model is the log difference
+- defined simply as $x_t := log(CPI_{t}) - log(CPI_{t-12})$.
 
+
+## Model 1 - Auto-Regressive
 
 
 
@@ -93,6 +102,6 @@ they represent proportional changes well and in general they stabilizes the data
 
 
 [^1]: in hindsight it's probably one of the toughest things to try and predict.
-The US government tries and fails at it. Clearly, I'll manage to outsmart 'em.
+The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
 
 [^2]: https://www.bls.gov/cpi/tables/supplemental-files/
