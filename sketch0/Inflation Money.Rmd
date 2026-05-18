@@ -16,14 +16,19 @@ library("tidyr")
 
 # An Introduction
 
-I've finally came around to checking out Polymarket. To those that don't know it,
-it's a simple betting site. I wanted to try and learn about time-series analysis
+I've finally came around to checking out Polymarket - a betting site on every possible subject.
+I wanted to try and learn about time-series analysis
 and trying a bet on inflation seemed like an easy entry[^1]
 
 
 # The Bet
 
-The site poses a simple question:
+I wanted to study and try out a bet with a few guiding principles:
+
+1. Data is available and simple
+2. The bet could be studied using simple time-series methods
+
+I've stumbbled around and found the following simple finance question:
 
 $$
 \text{How high will inflation get in 2026?}
@@ -89,11 +94,55 @@ and $x_t = log(r_t)$. We can use Taylor series approximation $log(x+1) \approx x
 Therefore: $\log(r_t) \approx \frac{\pi_t}{100} \rightarrow \pi_t \approx 100 \cdot log(r_t)$
 
 We can therefore model $x_t$ and easily find the connection back to $\pi_t$. log-scales are preferred for a couple of reasons - they are easy to manipulate algebraically, 
-and represent proportional changes well. From now on, the variable we would like to model is the log difference
+and represent proportional changes well. From now on, the variable we would like to predict is the log difference
 - defined simply as $x_t := log(CPI_{t}) - log(CPI_{t-12})$.
 
 
 ## Model 1 - Auto-Regressive
+
+We start off with a simple Auto Regressive model of order p, defined as:
+
+$$
+X_{t} = \sum_{i=1}^p \phi_i X_{t-i} + \epsilon_t
+$$
+
+The model has the following assumptions:
+
+1. $\epsilon_t \sim N(0, \sigma_{\epsilon}^2)$
+2. $\phi_i$ are constants, $i \in$ (1, ... ,p)
+
+There are a couple of things worth checking before making predictions:
+
+1. whether $x_t$ is stationary process
+2. the optimal order for a model
+
+### Stationary
+
+In non-technical terms, a stationary process is a process whose statistical properties don't change over time
+This is an important property we wish our process will have, as it gives us the ability to learn patterns from 
+the past, and assume these patterns will continue in the future.
+
+We start out by fitting an optimal ordered AR model:
+```{r}
+# data edit
+monthly_cpi <- pivot_longer( # 
+  data,
+  cols = Jan.:Dec.,
+  names_to = "Month",
+  values_to = "CPI"
+)
+
+x_t <-  diff(log(monthly_cpi$CPI), lag = 12) # x_t = log(CPI_t) - log(CPI_{t-12})
+x_t <- na.omit(x_t)
+
+# model fit
+model <- ar(x_t)
+```
+
+
+
+
+
 
 
 
