@@ -16,9 +16,8 @@ library("tidyr")
 
 # An Introduction
 
-I've finally came around to checking out Polymarket - a betting site on every possible subject.
-I wanted to try and learn about time-series analysis
-and trying a bet on inflation seemed like an easy entry[^1]
+I've finally found time to check out Polymarket - a betting site with various subjects to bet on.
+I wanted to try and learn about time-series analysis, and an inflation bet seemed like an easy entry[^1]
 
 
 # The Bet
@@ -26,9 +25,9 @@ and trying a bet on inflation seemed like an easy entry[^1]
 I wanted to study and try out a bet with a few guiding principles:
 
 1. Data is available and simple
-2. The bet could be studied using simple time-series methods
+2. The problem could be modeled using simple time-series methods
 
-I've stumbbled around and found the following simple finance question:
+After some exploration, I've found the following simple finance question:
 
 $$
 \text{How high will inflation get in 2026?}
@@ -52,7 +51,7 @@ We would like to model the probability $P(E_t)$ for all $t \in T$
 The general process will be composed of 2 stages:
 
 1. Collect, organize and analyze initial data
-2. Construct (learn and test) a model designed to predict the probability $P(E_t)$
+2. Construct a model designed to predict the probability $P(E_t)$
 
 # Step 1 - The Data
 
@@ -85,7 +84,7 @@ We can take $x_0 := PCI_{\text{January, 1913}}$, $x_1 := PCI_{\text{February, 19
 As we've seen earlier, what we're interested in is the inflation ratio - not the CPI of each month directly.
 From a short search in Google, we find the following relationship between IR and CPI at time t:
 $$
-\pi_t := \frac{CPI_t - CPI_{t-12}}{CPI_{t-12}} \cdot 100
+\text{inflation ratio at month t} := \pi_t = \frac{CPI_t - CPI_{t-12}}{CPI_{t-12}} \cdot 100
 $$
 
 We should note that this is not a very comfortable variable, and a more suitable one could be $x_t := log(CPI_t) - log(CPI_{t-12}) = log(\frac{CPI_t}{CPI_{t-12}})$.
@@ -97,34 +96,9 @@ We can therefore model $x_t$ and easily find the connection back to $\pi_t$. log
 and represent proportional changes well. From now on, the variable we would like to predict is the log difference
 - defined simply as $x_t := log(CPI_{t}) - log(CPI_{t-12})$.
 
+Let's start by composing the main time series vector $(x_0, x_1, ...)$ and see some basic visuals to get a feel for the trends in the data:
+```{r, echo=FALSE, fig.align='center', fig.width=6, fig.height=4}
 
-## Model 1 - Auto-Regressive
-
-We start off with a simple Auto Regressive model of order p, defined as:
-
-$$
-X_{t} = \sum_{i=1}^p \phi_i X_{t-i} + \epsilon_t
-$$
-
-The model has the following assumptions:
-
-1. $\epsilon_t \sim N(0, \sigma_{\epsilon}^2)$
-2. $\phi_i$ are constants, $i \in$ (1, ... ,p)
-
-There are a couple of things worth checking before making predictions:
-
-1. whether $x_t$ is stationary process
-2. the optimal order for a model
-
-### Stationary
-
-In non-technical terms, a stationary process is a process whose statistical properties don't change over time
-This is an important property we wish our process will have, as it gives us the ability to learn patterns from 
-the past, and assume these patterns will continue in the future.
-
-We start out by fitting an optimal ordered AR model:
-```{r}
-# data edit
 monthly_cpi <- pivot_longer( # 
   data,
   cols = Jan.:Dec.,
@@ -134,8 +108,46 @@ monthly_cpi <- pivot_longer( #
 
 x_t <-  diff(log(monthly_cpi$CPI), lag = 12) # x_t = log(CPI_t) - log(CPI_{t-12})
 x_t <- na.omit(x_t)
+x_t <- ts(x_t, frequency = 12)
 
-# model fit
+plot(x_t, type="l", xlab="months", ylab="x_t" ,main="x_t values, per month")
+hist(x_t, xlab="x_t")
+boxplot(x_t, ylab="x_t", main="boxplot of x_t")
+
+```
+
+
+## Model 1 - Auto-Regressive
+
+We start off with a simple Auto Regressive model of order p, defined as:
+
+$$
+x_{t} = \sum_{i=1}^p \phi_i x_{t-i} + \epsilon_t
+$$
+
+The model has the following assumptions:
+
+1. $\epsilon_t \sim N(0, \sigma_{\epsilon}^2)$
+2. $\phi_i$ are constants, $i \in$ (1, ... ,p)
+
+There are a couple of things worth checking before making predictions:
+
+1. is $x_t$ a stationary process?
+2. what is the optimal order p, considering our data?
+3. are the assumptions correct? i.e, is $\epsilon_t$ distributed normally?
+
+### is $x_t$ stationary?
+
+In non-technical terms, a stationary process is a process whose statistical properties don't change over time.
+This is an important property we wish our process will have, as it (roughly) gives us the ability to learn patterns from 
+the past, and assume these patterns will continue in the future. 
+
+How do we check whether our process is stationary? 
+
+### what is the optimal order p
+
+We start out by fitting an optimal ordered AR model:
+```{r}
 model <- ar(x_t)
 ```
 
