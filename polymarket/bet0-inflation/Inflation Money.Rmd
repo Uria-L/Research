@@ -43,9 +43,9 @@ It's important to understand the context of the bet - if at ANY month during the
 resolved in favor of whoever placed a bet on that threshold. In this problem's context, a given month's threshold is calculated using the
 $\textit{Consumer Price Index}$. We need to get a little formal so we can start thinking about the problem:
 
-Denote $\pi_m$ the inflation ratio (denoted by IR from now on) at the end of month $m \in (1, ..., 12)$.
+Denote $\pi_m$ the inflation ratio (abbreviated by IR from now on) at the end of month $m \in (1, ..., 12)$.
 Denote $t \in (4, 4.5, 5, 6, 8, 10) := T$ the critical thresholds suggested in the bet.
-Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\} > t$, for all thresholds t.
+Our event of interest is defined as $E_t := \{max_{m \in (1, ..., 12)} \pi_m\ > t\}$, for all thresholds t.
 We would like to model the probability $P(E_t)$ for all $t \in T$
 
 The general process will be composed of 2 stages:
@@ -108,13 +108,14 @@ monthly_cpi <- pivot_longer( #
 
 x_t <-  diff(log(monthly_cpi$CPI), lag = 12) # x_t = log(CPI_t) - log(CPI_{t-12})
 x_t <- na.omit(x_t)
-x_t <- ts(x_t, frequency = 12)
+x_t <- ts(x_t)
 
 plot(x_t, type="l", xlab="months", ylab="x_t" ,main="x_t values, per month")
 hist(x_t, xlab="x_t")
 boxplot(x_t, ylab="x_t", main="boxplot of x_t")
 
 ```
+
 
 
 ## Model 1 - Auto-Regressive
@@ -140,9 +141,21 @@ There are a couple of things worth checking before making predictions:
 
 In non-technical terms, a stationary process is a process whose statistical properties don't change over time.
 This is an important property we wish our process will have, as it (roughly) gives us the ability to learn patterns from 
-the past, and assume these patterns will continue in the future. 
+the past, and assume these patterns will continue in the future. There are a couple of definitions for stationary. We'll
+use stationary in the weak sense, i.e:
 
-How do we check whether our process is stationary? 
+1. the mean value function $\mu_t = E[x_t]$ is constant, and doesn't depend on t
+2. the auto-covariance function $\gamma(s, t) = cov(x_s, x_t)$ depends on s and t only through their difference $|s-t|$
+
+We start with 2 tests which are standard to check whether a process is stationary or not[^3]: KPSS and ADF:
+```{r, warning=FALSE, echo=FALSE}
+library(tseries)
+
+adf.test(x_t)
+kpss.test(x_t)
+```
+
+
 
 ### what is the optimal order p
 
@@ -166,3 +179,5 @@ model <- ar(x_t)
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
 
 [^2]: https://www.bls.gov/cpi/tables/supplemental-files/
+
+[^3]: These tests have weak statistical power, so should be taken with a grain of salt
