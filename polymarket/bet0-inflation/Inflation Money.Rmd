@@ -162,7 +162,7 @@ use stationary in the weak sense, i.e:
 1. the mean value function $\mu_t = E[x_t]$ is constant, and doesn't depend on t
 2. the auto-covariance function $\gamma(s, t) = cov(x_s, x_t)$ depends on s and t only through their difference $|s-t|$
 
-We start with 2 tests which are standard to check whether a process is stationary or not[^3], KPSS and ADF:
+We start with 2 tests which are standard to check whether a process is stationary or not, KPSS and ADF:
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(tseries)
 
