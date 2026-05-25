@@ -11,6 +11,8 @@ library("knitr")
 library("readxl")
 library("dplyr")
 library("tidyr")
+library("ggplot2")
+library("patchwork")
 ```
 
 
@@ -97,7 +99,7 @@ and represent proportional changes well. From now on, the variable we would like
 - defined simply as $x_t := log(CPI_{t}) - log(CPI_{t-12})$.
 
 Let's start by composing the main time series vector $(x_0, x_1, ...)$ and see some basic visuals to get a feel for the trends in the data:
-```{r, echo=FALSE, fig.align='center', fig.width=6, fig.height=4}
+```{r, echo=FALSE, warning=FALSE , message=FALSE ,fig.align='center', fig.width=6, fig.height=4}
 
 monthly_cpi <- pivot_longer( # 
   data,
@@ -109,10 +111,23 @@ monthly_cpi <- pivot_longer( #
 x_t <-  diff(log(monthly_cpi$CPI), lag = 12) # x_t = log(CPI_t) - log(CPI_{t-12})
 x_t <- na.omit(x_t)
 x_t <- ts(x_t)
+x_t_df <- data.frame(months = 1:length(x_t), x_t = as.numeric(x_t))
 
-plot(x_t, type="l", xlab="months", ylab="x_t" ,main="x_t values, per month")
-hist(x_t, xlab="x_t")
-boxplot(x_t, ylab="x_t", main="boxplot of x_t")
+line.p <- ggplot(x_t_df, aes(x = months, y = x_t * 100)) +
+  geom_line() +
+  labs(title = "inflation ratio over time", x = "months", y = "inflation ratio")
+
+hist.p <- ggplot(x_t_df , aes(x = x_t * 100)) +
+  geom_histogram() +
+  labs(x = "inflation ratio")
+
+box.p <- ggplot(x_t_df , aes(y = x_t * 100)) +
+  geom_boxplot() +
+  labs(y = "inflation ratio")
+
+line.p
+hist.p
+box.p
 
 ```
 
@@ -147,13 +162,28 @@ use stationary in the weak sense, i.e:
 1. the mean value function $\mu_t = E[x_t]$ is constant, and doesn't depend on t
 2. the auto-covariance function $\gamma(s, t) = cov(x_s, x_t)$ depends on s and t only through their difference $|s-t|$
 
-We start with 2 tests which are standard to check whether a process is stationary or not[^3]: KPSS and ADF:
-```{r, warning=FALSE, echo=FALSE}
+We start with 2 tests which are standard to check whether a process is stationary or not[^3], KPSS and ADF:
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(tseries)
 
 adf.test(x_t)
 kpss.test(x_t)
 ```
+Both tests suggest stationary process - ADF's null hypothesis is that the process isn't stationary, while KPSS's null is that the process is stationary.
+Thus rejecting ADF and not rejecting KPSS both imply stationary process.
+
+To further check if our process is stationary, we can fit an Auto-Regressive model of order 1.
+If the AR(1) coefficient estimate is less than 1, we have more supporting evidence for a stationary process.
+We have:
+```{r, echo=FALSE}
+ar1 <- ar(x_t , aic = FALSE, order.max = 1)
+cat("the AR(1) coefficient value is: ", round(ar1$ar, 4) , "\n")
+```
+
+This again implies stationary process, but we notice the value is very close to 1.
+For now we'll proceed with assuming stationary process, but we remember we don't
+have the strongest indicator for it.
+
 
 
 
@@ -179,5 +209,3 @@ model <- ar(x_t)
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
 
 [^2]: https://www.bls.gov/cpi/tables/supplemental-files/
-
-[^3]: These tests have weak statistical power, so should be taken with a grain of salt
