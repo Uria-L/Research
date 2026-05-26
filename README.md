@@ -1,2 +1,2 @@
 # Research
-Just a place to gather some research ideas
+Just a place to gather some research ideas and sketches
