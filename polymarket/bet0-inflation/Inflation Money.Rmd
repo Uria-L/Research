@@ -143,14 +143,15 @@ $$
 
 The model has the following assumptions:
 
-1. $\epsilon_t \sim N(0, \sigma_{\epsilon}^2)$
+1. $\epsilon_t$ is white noise, ie: $E[\epsilon_t] = 0$, $Var(\epsilon_t) = \sigma^2$ and $Cor(\epsilon_t, \epsilon_{\tau}) = 0$ for $t \ne \tau$
 2. $\phi_i$ are constants, $i \in$ (1, ... ,p)
 
 There are a couple of things worth checking before making predictions:
 
 1. is $x_t$ a stationary process?
-2. what is the optimal order p, considering our data?
-3. are the assumptions correct? i.e, is $\epsilon_t$ distributed normally?
+2. are the assumptions correct? 
+3. what is the optimal order p, considering our data?
+
 
 ### is $x_t$ stationary?
 
@@ -184,12 +185,17 @@ This again implies stationary process, but we notice the value is very close to 
 For now we'll proceed with assuming stationary process, but we remember we don't
 have the strongest indicator for it.
 
+Now we wish to answer whether the assumptions of the AR model holds, and find the optimal order p.
+First we need to fit a model. We'll split the data to training, validation and test sets.
+Training will be used for model training.
+Validation will be used to pick optimal model order
+Test set will be estimate prediction error
 
+### what is the optimal order p?
 
-
-### what is the optimal order p
-
-We start out by fitting an optimal ordered AR model:
+We start out by splitting the data into training, validation and test sets.
+It's clear we can't just randomly split the data. If the test set is from the past, and the learning set is from the future, 
+We'll have information leakage.
 ```{r}
 model <- ar(x_t)
 ```
