@@ -197,7 +197,7 @@ It's clear we can't just randomly split the data. If the test set is from the pa
 We'll have information leakage. So the first 70% of points will be in the training set, the middle 20% will be the validation set and
 the last 10% the test set:
 
-```{r}
+```{r, echo=FALSE}
 # Assuming your time series object is called 'ts_data'
 n <- length(x_t)
 
@@ -214,10 +214,6 @@ test_data <- window(x_t,
                     start = time(x_t)[train_size + valid_size + 1], 
                     end = end(x_t))
 
-# Verify split
-cat("Training:", length(train_data), "observations\n")
-cat("Validation:", length(valid_data), "observations\n")
-cat("Test:", length(test_data), "observations\n")
 ```
 
 
