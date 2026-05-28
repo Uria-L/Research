@@ -132,7 +132,6 @@ box.p
 ```
 
 
-
 ## Model 1 - Auto-Regressive
 
 We start off with a simple Auto Regressive model of order p, defined as:
@@ -193,11 +192,32 @@ Test set will be estimate prediction error
 
 ### what is the optimal order p?
 
-We start out by splitting the data into training, validation and test sets.
+We start out by splitting the data into training, validation and test sets with 70/20/10 proportion.
 It's clear we can't just randomly split the data. If the test set is from the past, and the learning set is from the future, 
-We'll have information leakage.
+We'll have information leakage. So the first 70% of points will be in the training set, the middle 20% will be the validation set and
+the last 10% the test set:
+
 ```{r}
-model <- ar(x_t)
+# Assuming your time series object is called 'ts_data'
+n <- length(x_t)
+
+# Calculate split indices
+train_size <- floor(0.70 * n)
+valid_size <- floor(0.20 * n)
+
+# Extract time series subsets using window()
+train_data <- window(x_t, start = start(x_t), end = time(x_t)[train_size])
+valid_data <- window(x_t, 
+                     start = time(x_t)[train_size + 1], 
+                     end = time(x_t)[train_size + valid_size])
+test_data <- window(x_t, 
+                    start = time(x_t)[train_size + valid_size + 1], 
+                    end = end(x_t))
+
+# Verify split
+cat("Training:", length(train_data), "observations\n")
+cat("Validation:", length(valid_data), "observations\n")
+cat("Test:", length(test_data), "observations\n")
 ```
 
 
