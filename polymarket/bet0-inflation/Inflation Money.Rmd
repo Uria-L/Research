@@ -142,7 +142,7 @@ $$
 
 The model has the following assumptions:
 
-1. $\epsilon_t$ is white noise, ie: $E[\epsilon_t] = 0$, $Var(\epsilon_t) = \sigma^2$ and $Cor(\epsilon_t, \epsilon_{\tau}) = 0$ for $t \ne \tau$
+1. $\epsilon_t$ is white noise, i.e: $E[\epsilon_t] = 0$, $Var(\epsilon_t) = \sigma^2$ and $Cor(\epsilon_t, \epsilon_{\tau}) = 0$ for $t \ne \tau$
 2. $\phi_i$ are constants, $i \in$ (1, ... ,p)
 
 There are a couple of things worth checking before making predictions:
@@ -170,7 +170,7 @@ adf.test(x_t)
 kpss.test(x_t)
 ```
 Both tests suggest stationary process - ADF's null hypothesis is that the process isn't stationary, while KPSS's null is that the process is stationary.
-Thus rejecting ADF and not rejecting KPSS both imply stationary process.
+Therefore, rejecting ADF and not rejecting KPSS suggests our time series is a stationary process.
 
 To further check if our process is stationary, we can fit an Auto-Regressive model of order 1.
 If the AR(1) coefficient estimate is less than 1, we have more supporting evidence for a stationary process.
@@ -180,9 +180,9 @@ ar1 <- ar(x_t , aic = FALSE, order.max = 1)
 cat("the AR(1) coefficient value is: ", round(ar1$ar, 4) , "\n")
 ```
 
-This again implies stationary process, but we notice the value is very close to 1.
+This again implies stationary process. The value is indeed very close to 1, which suggests our case might be close to non-stationary.
 For now we'll proceed with assuming stationary process, but we remember we don't
-have the strongest indicator for it.
+have the strongest indicators for it.
 
 Now we wish to answer whether the assumptions of the AR model holds, and find the optimal order p.
 First we need to fit a model. We'll split the data to training, validation and test sets.
@@ -193,19 +193,28 @@ Test set will be estimate prediction error
 ### what is the optimal order p?
 
 We start out by splitting the data into training, validation and test sets with 70/20/10 proportion.
+The training set will be used to train the model, validation set to tune the optimal order of our model to prevent over-fit, and the test set will be used to 
+estimate prediction error.
 It's clear we can't just randomly split the data. If the test set is from the past, and the learning set is from the future, 
 We'll have information leakage. So the first 70% of points will be in the training set, the middle 20% will be the validation set and
-the last 10% the test set:
+the last 10% the test set.
 
+We'll perform the following procedure to train a final optimal model:
+
+1. Train 30 different order models on the training set
+2. Tune the order p using the validation set, to prevent over-fit
+3. Train the final model on both training and validation set, and estimate prediction error on the test set
+
+The validation error is estimated with the RMSE (Root Mean Squared Error).
+The following plot shows the results, with the red dot marking the optimal order:
 ```{r, echo=FALSE}
-# Assuming your time series object is called 'ts_data'
+
+# Split the data
 n <- length(x_t)
 
-# Calculate split indices
 train_size <- floor(0.70 * n)
 valid_size <- floor(0.20 * n)
 
-# Extract time series subsets using window()
 train_data <- window(x_t, start = start(x_t), end = time(x_t)[train_size])
 valid_data <- window(x_t, 
                      start = time(x_t)[train_size + 1], 
@@ -214,15 +223,48 @@ test_data <- window(x_t,
                     start = time(x_t)[train_size + valid_size + 1], 
                     end = end(x_t))
 
+# Train AR(1), ..., AR(10)
+models <- lapply(1:30, function(p) ar(train_data, aic = FALSE, order.max = p))
+
+# Pick optimal order p
+errs <- sapply(models, function(m) {
+  preds <- numeric(length(valid_data))
+  for(i in 1:length(valid_data)) {
+    # Combine training data + actual prior validation points
+    history <- c(train_data, valid_data[1:(i-1)])
+    # Use the fitted model's coefficients, just feed it new history
+    preds[i] <- predict(m, newdata = history, n.ahead = 1)$pred
+  }
+  mean((valid_data - preds)^2)
+})
+
+p_opt <- which.min(errs)
+
+# Train final model and estimate test error
+
+combined_data <- ts(c(train_data, valid_data))
+final.model <- ar(combined_data, aic = FALSE, order.max = p_opt)
+test_err <-  mean((test_data - predict(final.model, n.ahead=length(test_data))$pred)^2)
 ```
 
+```{r, echo=FALSE, warning=FALSE}
+# Visualize error by order with test error annotation
+df <- data.frame(order = 1:30, mse = errs, optimal = 1:30 == p_opt)
 
-
-
-
-
-
-
+ggplot(df, aes(x = order, y = mse, color = optimal)) +
+  geom_point(size = 3) + 
+  geom_line() +
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+  annotate("text", x = Inf, y = Inf, 
+           label = paste("Optimal order:", p_opt, "\nTest MSE:", round(test_err, 6)),
+           hjust = 1.1, vjust = 1.3, size = 4, fontface = "bold",
+           bbox = list(boxstyle = "round", fill = "lightgray", alpha = 0.8)) +
+  labs(x = "Order", y = "Validation MSE", 
+       title = "AR Model Selection",
+       subtitle = paste("Selected AR(", p_opt, ") — Final Test MSE: ", round(test_err, 6), sep = "")) +
+  theme_minimal() + 
+  theme(legend.position = "none", plot.subtitle = element_text(size = 11, face = "italic"))
+```
 
 
 
