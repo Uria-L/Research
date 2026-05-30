@@ -241,7 +241,6 @@ errs <- sapply(models, function(m) {
 p_opt <- which.min(errs)
 
 # Train final model and estimate test error
-
 combined_data <- ts(c(train_data, valid_data))
 final.model <- ar(combined_data, aic = FALSE, order.max = p_opt)
 test_err <-  mean((test_data - predict(final.model, n.ahead=length(test_data))$pred)^2)
@@ -261,11 +260,14 @@ ggplot(df, aes(x = order, y = mse, color = optimal)) +
            bbox = list(boxstyle = "round", fill = "lightgray", alpha = 0.8)) +
   labs(x = "Order", y = "Validation MSE", 
        title = "AR Model Selection",
-       subtitle = paste("Selected AR(", p_opt, ") — Final Test MSE: ", round(test_err, 6), sep = "")) +
+       subtitle = paste("Final Test MSE: ", round(test_err, 6), sep = "")) +
   theme_minimal() + 
   theme(legend.position = "none", plot.subtitle = element_text(size = 11, face = "italic"))
 ```
 
+It's clear the validation MSE numbers are quite close in value, approximately in the range $(10^{-5}, 1.6 \cdot 10^{-5})$.
+This implies the model's performance is almost unaffected by it's order. This strongly encourages picking a small order
+for the model - which keeps both performance with simplicity. For our purpose - we'll keep the 2nd ordered model for prediction
 
 
 
