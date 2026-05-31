@@ -86,7 +86,7 @@ We can take $x_0 := PCI_{\text{January, 1913}}$, $x_1 := PCI_{\text{February, 19
 As we've seen earlier, what we're interested in is the inflation ratio - not the CPI of each month directly.
 From a short search in Google, we find the following relationship between IR and CPI at time t:
 $$
-\text{inflation ratio at month t} := \pi_t = \frac{CPI_t - CPI_{t-12}}{CPI_{t-12}} \cdot 100
+\text{inflation ratio at month t} := \pi_t = \frac{CPI_t - CPI_{t-12}}{CPI_{t-12}} \cdot 100 = (\frac{CPI_t}{CPI_{t-12}} - 1) \cdot 100
 $$
 
 We should note that this is not a very comfortable variable, and a more suitable one could be $x_t := log(CPI_t) - log(CPI_{t-12}) = log(\frac{CPI_t}{CPI_{t-12}})$.
@@ -128,7 +128,6 @@ box.p <- ggplot(x_t_df , aes(y = x_t * 100)) +
 line.p
 hist.p
 box.p
-
 ```
 
 
@@ -195,81 +194,75 @@ Test set will be estimate prediction error
 We start out by splitting the data into training, validation and test sets with 70/20/10 proportion.
 The training set will be used to train the model, validation set to tune the optimal order of our model to prevent over-fit, and the test set will be used to 
 estimate prediction error.
-It's clear we can't just randomly split the data. If the test set is from the past, and the learning set is from the future, 
-We'll have information leakage. So the first 70% of points will be in the training set, the middle 20% will be the validation set and
+It's clear we can't just randomly split the data. If the test set is from the "past", and the learning set is from the "future", 
+We'll have information leakage. So the first 70% points will be in the training set, the middle 20% will be the validation set and
 the last 10% the test set.
 
-We'll perform the following procedure to train a final optimal model:
+Now we need to understand how to find the optimal order p. A first basic question would be - optimal in what sense?
+In our problem, we're directly trying to estimate the probability that yearly inflation exceeds a threshold.
+Therefore, model validation should be performed on those probabilities. Here is the process we'll perform to choose an optimal order:
 
-1. Train 30 different order models on the training set
-2. Tune the order p using the validation set, to prevent over-fit
-3. Train the final model on both training and validation set, and estimate prediction error on the test set
+1. Fit AR models, from order 1 to 30
+2. For each validation year:generate predictive distributions via simulation and estimate $P(E_t)$ for each threshold
+3. Evaluate those probabilities with Brier score
+4. Choose the order with the best average
 
-The validation error is estimated with the RMSE (Root Mean Squared Error).
-The following plot shows the results, with the red dot marking the optimal order:
+Below we can see a plot which shows the Brier score for each model:
 ```{r, echo=FALSE}
+th <- c(4, 4.5, 5, 6, 8, 10)
 
-# Split the data
 n <- length(x_t)
+n_train <- floor(0.7 * n)
+n_valid <- floor(0.2 * n)
 
-train_size <- floor(0.70 * n)
-valid_size <- floor(0.20 * n)
+train <- x_t[1:n_train]
+valid <- x_t[(n_train + 1):(n_train + n_valid)]
 
-train_data <- window(x_t, start = start(x_t), end = time(x_t)[train_size])
-valid_data <- window(x_t, 
-                     start = time(x_t)[train_size + 1], 
-                     end = time(x_t)[train_size + valid_size])
-test_data <- window(x_t, 
-                    start = time(x_t)[train_size + valid_size + 1], 
-                    end = end(x_t))
+scores <- sapply(1:30, function(p) {
 
-# Train AR(1), ..., AR(10)
-models <- lapply(1:30, function(p) ar(train_data, aic = FALSE, order.max = p))
+  brier <- c()
 
-# Pick optimal order p
-errs <- sapply(models, function(m) {
-  preds <- numeric(length(valid_data))
-  for(i in 1:length(valid_data)) {
-    # Combine training data + actual prior validation points
-    history <- c(train_data, valid_data[1:(i-1)])
-    # Use the fitted model's coefficients, just feed it new history
-    preds[i] <- predict(m, newdata = history, n.ahead = 1)$pred
+  for(i in seq(1, length(valid) - 11, by = 12)) {
+
+    hist <- c(train, valid[1:(i - 1)])
+
+    fit <- ar(hist, order.max = p, aic = FALSE)
+
+    sims <- replicate(1000,
+      max(100 * arima.sim(
+        model = list(ar = fit$ar),
+        n = 12,
+        sd = sqrt(fit$var.pred)
+      ))
+    )
+
+    actual_max <- max(100 * valid[i:(i + 11)])
+
+    for(t in th) {
+      prob <- mean(sims > t)
+      actual <- as.integer(actual_max > t)
+      brier <- c(brier, (prob - actual)^2)
+    }
   }
-  mean((valid_data - preds)^2)
+
+  mean(brier)
 })
 
-p_opt <- which.min(errs)
 
-# Train final model and estimate test error
-combined_data <- ts(c(train_data, valid_data))
-final.model <- ar(combined_data, aic = FALSE, order.max = p_opt)
-test_err <-  mean((test_data - predict(final.model, n.ahead=length(test_data))$pred)^2)
 ```
 
-```{r, echo=FALSE, warning=FALSE}
-# Visualize error by order with test error annotation
-df <- data.frame(order = 1:30, mse = errs, optimal = 1:30 == p_opt)
-
-ggplot(df, aes(x = order, y = mse, color = optimal)) +
-  geom_point(size = 3) + 
+```{r, echo=FALSE, fig.align='center'}
+data.frame(order = 1:30, brier = scores) |>
+  ggplot(aes(order, brier)) +
   geom_line() +
-  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
-  annotate("text", x = Inf, y = Inf, 
-           label = paste("Optimal order:", p_opt, "\nTest MSE:", round(test_err, 6)),
-           hjust = 1.1, vjust = 1.3, size = 4, fontface = "bold",
-           bbox = list(boxstyle = "round", fill = "lightgray", alpha = 0.8)) +
-  labs(x = "Order", y = "Validation MSE", 
-       title = "AR Model Selection",
-       subtitle = paste("Final Test MSE: ", round(test_err, 6), sep = "")) +
-  theme_minimal() + 
-  theme(legend.position = "none", plot.subtitle = element_text(size = 11, face = "italic"))
+  geom_point() +
+  labs(
+    x = "AR order",
+    y = "Validation Brier score",
+    title = "AR Model Selection via Exceedance-Probability Forecasts"
+  ) +
+  theme_minimal()
 ```
-
-It's clear the validation MSE numbers are quite close in value, approximately in the range $(10^{-5}, 1.6 \cdot 10^{-5})$.
-This implies the model's performance is almost unaffected by it's order. This strongly encourages picking a small order
-for the model - which keeps both performance with simplicity. For our purpose - we'll keep the 2nd ordered model for prediction
-
-
 
 [^1]: in hindsight it's probably one of the toughest things to try and predict.
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
