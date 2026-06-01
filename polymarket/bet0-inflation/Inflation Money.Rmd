@@ -203,11 +203,12 @@ In our problem, we're directly trying to estimate the probability that yearly in
 Therefore, model validation should be performed on those probabilities. Here is the process we'll perform to choose an optimal order:
 
 1. Fit AR models, from order 1 to 30
-2. For each validation year:generate predictive distributions via simulation and estimate $P(E_t)$ for each threshold
+2. For each validation year : generate predictive distributions via simulation and estimate $P(E_t)$ for each threshold
 3. Evaluate those probabilities with Brier score
 4. Choose the order with the best average
 
-Below we can see a plot which shows the Brier score for each model:
+The plot shown contains the Brier score for each model.
+The score is the average performance over all thresholds:
 ```{r, echo=FALSE}
 th <- c(4, 4.5, 5, 6, 8, 10)
 
@@ -248,8 +249,19 @@ scores <- sapply(1:30, function(p) {
   mean(brier)
 })
 
-
 ```
+
+```{r, echo=FALSE}
+# For each threshold, compute: freq * (1 - freq)
+naive_brier <- sapply(th, function(t) {
+  freq <- mean(valid > t/100)  # fraction of months exceeding threshold
+  freq * (1 - freq)
+})
+
+# mean(naive_brier)  # naive baseline
+```
+
+
 
 ```{r, echo=FALSE, fig.align='center'}
 data.frame(order = 1:30, brier = scores) |>
@@ -263,6 +275,8 @@ data.frame(order = 1:30, brier = scores) |>
   ) +
   theme_minimal()
 ```
+
+
 
 [^1]: in hindsight it's probably one of the toughest things to try and predict.
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
