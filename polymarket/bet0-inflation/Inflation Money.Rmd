@@ -207,8 +207,7 @@ Therefore, model validation should be performed on those probabilities. Here is 
 3. Evaluate those probabilities with Brier score
 4. Choose the order with the best average
 
-The plot shown contains the Brier score for each model.
-The score is the average performance over all thresholds:
+The plot shown contains the Brier score for each model (averaged over all thresholds):
 ```{r, echo=FALSE}
 th <- c(4, 4.5, 5, 6, 8, 10)
 
@@ -251,18 +250,6 @@ scores <- sapply(1:30, function(p) {
 
 ```
 
-```{r, echo=FALSE}
-# For each threshold, compute: freq * (1 - freq)
-naive_brier <- sapply(th, function(t) {
-  freq <- mean(valid > t/100)  # fraction of months exceeding threshold
-  freq * (1 - freq)
-})
-
-# mean(naive_brier)  # naive baseline
-```
-
-
-
 ```{r, echo=FALSE, fig.align='center'}
 data.frame(order = 1:30, brier = scores) |>
   ggplot(aes(order, brier)) +
@@ -276,7 +263,8 @@ data.frame(order = 1:30, brier = scores) |>
   theme_minimal()
 ```
 
-
+To understand how well our model is performing, we would like to establish some baseline model.
+Our baseline model will be defined as follows for all thresholds $t$: $P(\pi_{max} > t) = \frac{\text{# Observed months with inflation bigger than t}}{\text{# Total months }}$
 
 [^1]: in hindsight it's probably one of the toughest things to try and predict.
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
