@@ -263,8 +263,10 @@ data.frame(order = 1:30, brier = scores) |>
   theme_minimal()
 ```
 
+
 To understand how well our model is performing, we would like to establish some baseline model.
-Our baseline model will be defined as follows for all thresholds $t$: $P(\pi_{max} > t) = \frac{\text{# Observed months with inflation bigger than t}}{\text{# Total months }}$
+A simple non-parametric baseline model can be define as: $P(\pi_{max} > t) = \frac{\text{# Observed months with inflation bigger than t}}{\text{# Total months }}$, for all thresholds $t$.
+This would give us a simple comparison, showing us whether our models really do improve prediction (in the Brier score "way"), or worsen compared to the naive model.
 
 [^1]: in hindsight it's probably one of the toughest things to try and predict.
 The US government tries and fails at it constantly. Clearly, I'll manage to outsmart 'em.
